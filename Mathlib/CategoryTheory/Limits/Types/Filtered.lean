@@ -19,7 +19,7 @@ lemma `CategoryTheory.Limits.Types.FilteredColimit.colimit_eq_iff`:
 
 @[expose] public section
 
-open CategoryTheory Limits ConcreteCategory
+open CategoryTheory Limits
 
 universe v u w
 
@@ -54,6 +54,7 @@ theorem eqvGen_colimitTypeRel_of_rel (x y : Σ j, F.obj j) :
     · exact (Relation.EqvGen.rel _ _ ⟨f, rfl⟩)
     · exact (Relation.EqvGen.symm _ _ (Relation.EqvGen.rel _ _ ⟨g, h⟩))
 
+open ConcreteCategory in
 /-- Recognizing filtered colimits of types. -/
 noncomputable def isColimitOf (t : Cocone F) (hsurj : ∀ x : t.pt, ∃ i xi, x = t.ι.app i xi)
     (hinj :
@@ -78,6 +79,10 @@ noncomputable def isColimitOf (t : Cocone F) (hsurj : ∀ x : t.pt, ∃ i xi, x 
         dsimp
         nth_rw 1 [hf x]
         simp [← hm, comp_apply] }
+
+section
+
+open ConcreteCategory
 
 variable [IsFilteredOrEmpty J]
 
@@ -171,5 +176,93 @@ lemma jointly_surjective_of_isColimit₂
   obtain ⟨j₂, x₂, rfl⟩ := Types.jointly_surjective_of_isColimit ht x₂
   exact ⟨max j₁ j₂, F.map (leftToMax _ _) x₁, F.map (rightToMax _ _) x₂,
     congr_hom (t.w (leftToMax j₁ j₂)) x₁, congr_hom (t.w (rightToMax j₁ j₂)) x₂⟩
+
+end
+
+section
+
+variable {F} [J_filtered : IsFiltered J]
+
+open Fin ConcreteCategory in
+lemma IsColimit_eq_pairwise_fin {t : Cocone F} (ht : IsColimit t) {n : ℕ} (jf : Fin n → J)
+  (xf : (a : Fin n) → F.obj (jf a)) (hx : ∀ a b, t.ι.app (jf a) (xf a) = t.ι.app (jf b) (xf b))
+  : ∃ (k : _) (ff : (a : Fin n) → (jf a ⟶ k)), ∀ a b, F.map (ff a) (xf a) = F.map (ff b) (xf b)
+  := by
+  induction n with | zero => _ | succ n ih => _
+  · have : ∀ a, False := fun a => (exists_fin_zero.mp (⟨a, True.intro⟩ : ∃ a', True))
+    exact ⟨J_filtered.nonempty.some, (fun a => (this a).elim), (fun a => (this a).elim)⟩
+  -- deal with the edge case of the first induction step
+  wlog n_ge_zero : n > 0
+  · have n_eq_zero := Nat.eq_zero_of_le_zero (Nat.ge_of_not_lt n_ge_zero)
+    subst n_eq_zero
+    let a₀ : Fin 1 := ⟨0, by apply Nat.zero_lt_succ⟩
+    use jf a₀, (fun a ↦ Fin.fin_one_eq_zero a ▸ 𝟙 _ : (a : Fin 1) → jf a ⟶ jf a₀)
+    intro a b
+    rw [Fin.fin_one_eq_zero a, Fin.fin_one_eq_zero b]
+  -- apply the induction hypothesis to the first n elements
+  let jf' : (_ : Fin n) → _ := jf ∘ castSucc
+  let xf' : (_ : Fin n) → _ := fun a' => castSucc a' |> xf
+  have : (∀ i j, (hom (t.ι.app (jf' i))) (xf' i) = (hom (t.ι.app (jf' j))) (xf' j)) := by
+    intro i j
+    dsimp [jf', xf']
+    apply hx
+  choose k' ff' hk' using ih jf' xf' this
+  -- apply isColimit_eq_iff to k' and the last element of α
+  let a₀' : Fin n := ⟨0, n_ge_zero⟩
+  let x₀' : F.obj k' := F.map (ff' a₀') (xf' a₀')
+  let a₁ : Fin (n + 1) := ⟨n, Nat.lt_add_one n⟩
+  have : t.ι.app k' x₀' = t.ι.app (jf a₁) (xf a₁) := by
+    calc
+      t.ι.app k' x₀' = t.ι.app k' (F.map (ff' a₀') (xf' a₀')) := by dsimp
+      _ = t.ι.app (jf' a₀') (xf' a₀') := by simp only [Functor.const_obj_obj,
+        NatTrans.naturality_apply, Functor.const_obj_map, id_apply]
+      _ = t.ι.app (jf a₁) (xf a₁) := by apply hx
+  choose k f g hk using (isColimit_eq_iff F ht).mp this
+  -- define jf a ⟶ k for each a : α
+  let ff : (a : Fin (n + 1)) → jf a ⟶ k := fun ⟨a, a_lt⟩ => if h : a = n then
+    Fin.mk_eq_mk.mpr h ▸ g
+    else
+    ff' ⟨a, Nat.lt_of_le_of_ne (Nat.le_of_lt_add_one a_lt) h⟩ ≫ f
+  -- show this k and ff suffice
+  use k, ff
+  rintro ⟨a, a_lt⟩ ⟨b, b_lt⟩
+  rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_add_one a_lt) with ha | rfl
+  <;> rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_add_one b_lt) with hb | rfl
+  · simp only [Fin.eta, ha.ne, ↓reduceDIte, Functor.map_comp, comp_apply, hb.ne, ff]
+    congr 1
+    apply hk'
+  · simp only [Fin.eta, ha.ne, ↓reduceDIte, Functor.map_comp, comp_apply, ff]
+    rw [← hk]
+    congr 1
+    apply hk'
+  · simp only [Fin.eta, ↓reduceDIte, hb.ne, Functor.map_comp, comp_apply, ff]
+    rw [← hk]
+    congr 1
+    apply hk'
+  · rfl
+
+lemma IsColimit_eq_pairwise_of_finite {t : Cocone F} (ht : IsColimit t)
+  {α : Type w} [α_finite : Finite α] (jf : α → J) (xf : (a : α) → F.obj (jf a))
+  (hx : ∀ a b, t.ι.app (jf a) (xf a) = t.ι.app (jf b) (xf b))
+  : ∃ (k : _) (ff : (a : α) → (jf a ⟶ k)), ∀ a b, F.map (ff a) (xf a) = F.map (ff b) (xf b) := by
+  rcases α_finite with @⟨n, iso_fin⟩
+  let jf' := jf ∘ iso_fin.symm
+  let xf' := fun i => iso_fin.symm i |> xf
+  have hx' : ∀ (a b : Fin n), t.ι.app (jf' a) (xf' a) = t.ι.app (jf' b) (xf' b) :=
+    by intro a b; apply hx
+  choose k ff' hk' using IsColimit_eq_pairwise_fin ht jf' xf' hx'
+  let ff : (a : α) → jf a ⟶ k :=
+    fun a => eqToHom (congr_arg jf (iso_fin.symm_apply_apply a).symm) ≫ (iso_fin a |> ff')
+  use k, ff
+  simp only [Functor.map_comp, comp_apply, ff]
+  intro a b
+  rw [eqToHom_map, eqToHom_map]
+  rw [eqToHom_apply (fun c => F.obj (jf c)), eqToHom_apply (fun c => F.obj (jf c))]
+  · have := hk' (iso_fin a) (iso_fin b)
+    simp only [xf'] at this
+    exact this
+  · apply (iso_fin.symm_apply_apply _).symm
+  · apply (iso_fin.symm_apply_apply _).symm
+end
 
 end CategoryTheory.Limits.Types.FilteredColimit

@@ -23,6 +23,8 @@ public section
 
 namespace CategoryTheory.Limits
 
+section
+
 variable {J C : Type*} [Category* J] [Category* C]
   {FC : C → C → Type*} {CC : C → Type*}
   [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)]
@@ -43,5 +45,26 @@ lemma colimit_eq_iff [HasColimit F] {i j : J} {xi : ToType <| F.obj i} {xj : ToT
     colimit.ι F i xi = colimit.ι F j xj ↔
       ∃ (k : _) (f : i ⟶ k) (g : j ⟶ k), F.map f xi = F.map g xj :=
   (colimit.isColimit F).eq_iff _
+
+end
+
+section
+
+universe u v
+
+variable {J : Type v} {C : Type u} [Category.{v} J] [Category C]
+  {FC : C → C → Type*} {CC : C → Type*}
+  [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)]
+  [ConcreteCategory C FC] [PreservesColimitsOfShape J (forget C)]
+  (F : J ⥤ C) [IsFiltered J]
+
+variable {F} in
+lemma IsColimit.eq_pairwise_of_finite {t : Cocone F} (ht : IsColimit t) {α : Type v} [Finite α]
+  (jf : α → J) (xf : (a : α) → ToType (F.obj (jf a)))
+  (hx : ∀ a b, t.ι.app (jf a) (xf a) = t.ι.app (jf b) (xf b))
+  : ∃ (k : _) (ff : (a : α) → (jf a ⟶ k)), ∀ a b, F.map (ff a) (xf a) = F.map (ff b) (xf b) :=
+  Types.FilteredColimit.IsColimit_eq_pairwise_of_finite (isColimitOfPreserves (forget C) ht) jf _ hx
+end
+
 
 end CategoryTheory.Limits

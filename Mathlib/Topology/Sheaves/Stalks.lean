@@ -448,6 +448,17 @@ theorem germ_eq (F : X.Presheaf C) {U V : Opens X} (x : X) (mU : x ∈ U) (mV : 
   obtain ⟨W, iU, iV, e⟩ := (colimit.isColimit ((OpenNhds.inclusion x).op ⋙ F)).eq_iff.mp h
   exact ⟨(unop W).1, (unop W).2, iU.unop, iV.unop, e⟩
 
+/-- If a finite family of sections have the same germ at `x`,
+then their restrictions to some open neighborhood `W` of `x` are equal. -/
+theorem germ_eq_finite (F : X.Presheaf C) {α : Type v} [Finite α] (U : α → Opens X) (x : X)
+  (mU : ∀ a, x ∈ U a) (sf : (a : α) → ToType (F.obj (op (U a))))
+  (h : ∀ a b, F.germ (U a) x (mU a) (sf a) = F.germ (U b) x (mU b) (sf b))
+  : ∃ (W : Opens X) (_ : x ∈ W) (iW : ∀ a, W ⟶ U a),
+    ∀ a b, F.map (iW a).op (sf a) = F.map (iW b).op (sf b) := by
+  obtain ⟨k, ff, hk⟩ := (colimit.isColimit ((OpenNhds.inclusion x).op ⋙ F)).eq_pairwise_of_finite
+    (fun a => op ⟨(U a), (mU a)⟩) sf h
+  exact ⟨(unop k).1, (unop k).2, fun a => (ff a).unop, hk⟩
+
 set_option backward.isDefEq.respectTransparency.types false in
 theorem stalkFunctor_map_injective_of_app_injective {F G : Presheaf C X} {f : F ⟶ G}
     (h : ∀ U : Opens X, Function.Injective (f.app (op U))) (x : X) :

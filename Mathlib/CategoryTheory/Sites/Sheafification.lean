@@ -99,6 +99,10 @@ variable {D : Type*} [Category* D] [HasWeakSheafify J D]
 noncomputable abbrev sheafify (P : Cᵒᵖ ⥤ D) : Cᵒᵖ ⥤ D :=
   presheafToSheaf J D |>.obj P |>.obj
 
+
+theorem Presheaf.sheafify_isSheaf (P : Cᵒᵖ ⥤ D) : Presheaf.IsSheaf J (sheafify J P) :=
+  presheafToSheaf J D |>.obj P |>.property
+
 /-- The canonical map from `P` to its sheafification. -/
 noncomputable abbrev toSheafify (P : Cᵒᵖ ⥤ D) : P ⟶ sheafify J P :=
   sheafificationAdjunction J D |>.unit.app P

@@ -6,6 +6,7 @@ Authors: Kim Morrison, Johannes Hölzl, Reid Barton, Sean Leather, Yury Kudryash
 -/
 module
 
+public import Mathlib.CategoryTheory.EqToHom
 public import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 
 /-!
@@ -176,6 +177,11 @@ theorem hom_id {X : C} : (𝟙 X : ToType X → ToType X) = id := by
 theorem hom_comp {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z) : (f ≫ g : ToType X → ToType Z) = g ∘ f := by
   ext
   simp
+
+lemma eqToHom_apply {α : Type*} (X : α → C) (x : (a : α) → ToType <| X a) {a b : α} (h : a = b) :
+  eqToHom (congr_arg X h) (x a) = x b := by
+  induction h
+  apply id_apply
 
 open ConcreteCategory
 
